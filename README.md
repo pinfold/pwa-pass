@@ -1,4 +1,3 @@
-# pwa-pass
 Deployment Guide
 
 1. Running the Docker Container

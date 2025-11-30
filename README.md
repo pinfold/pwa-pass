@@ -57,5 +57,4 @@ If your Python app generates links using `url_for`, you may need to tell Flask t
    app = Flask(__name__)
    # x_proto=1 tells Flask to trust the `X-Forwarded-Proto` header
    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
-   You should be able to copy the entire block above directly into your README.md file without any errors. I have also fixed the code fence identifiers (e.g., bash, nginx, python) to ensure perfect GitHub rendering.
    ```

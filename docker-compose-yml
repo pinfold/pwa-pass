@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  pwa-app:
+    build: .
+    container_name: opencommons_pwa
+    restart: always
+    ports:
+      # Maps port 8080 on your host machine to port 5000 in the container
+      # You will point your NGINX proxy to localhost:8080
+      - "8080:5000"
+    environment:
+      - FLASK_ENV=production

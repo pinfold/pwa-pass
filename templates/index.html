@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenCommons PWA</title>
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#4F46E5">
+    
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+
+    <!-- CONTENT: Shown if user is correctly in Chrome -->
+    <div id="app-content" class="hidden w-full max-w-md bg-white rounded-xl shadow-lg overflow-hidden">
+        <div class="bg-indigo-600 p-6 text-center">
+            <h1 class="text-2xl font-bold text-white">Welcome!</h1>
+            <p class="text-indigo-100 mt-2">You are using Chrome.</p>
+        </div>
+        <div class="p-6 text-center">
+            <p class="text-gray-600 mb-6">You are all set to use the OpenCommons App.</p>
+            <button id="install-btn" class="hidden bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-full w-full transition duration-200">
+                Install App to Home Screen
+            </button>
+            <a href="https://pass.opencommons.org" class="block mt-4 text-indigo-600 hover:underline">Go to pass.opencommons.org</a>
+        </div>
+    </div>
+
+    <!-- GUIDE: Shown if user is NOT in Chrome -->
+    <div id="browser-guide" class="hidden w-full max-w-md bg-white rounded-xl shadow-lg overflow-hidden">
+        <div class="bg-orange-500 p-6 text-center">
+            <svg class="w-16 h-16 text-white mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            <h1 class="text-2xl font-bold text-white">Chrome Required</h1>
+        </div>
+        <div class="p-6">
+            <p class="text-gray-700 mb-4">For the best experience, this application requires the <strong>Google Chrome</strong> browser.</p>
+            
+            <div id="android-instructions" class="hidden">
+                <p class="text-sm text-gray-500 mb-4">We detected you are on Android. Tap below to open this page in Chrome.</p>
+                <button onclick="openAndroidIntent()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg w-full mb-3 flex items-center justify-center">
+                    <span>Open in Chrome</span>
+                </button>
+            </div>
+
+            <div id="ios-instructions" class="hidden">
+                <p class="text-sm text-gray-500 mb-4">We detected you are on iOS. Tap below to switch to Chrome.</p>
+                <button onclick="openIOSScheme()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg w-full mb-3">
+                    Open in Chrome
+                </button>
+                <p class="text-xs text-gray-400 text-center">If nothing happens, you may need to install Chrome from the App Store.</p>
+            </div>
+
+            <div id="generic-instructions" class="hidden">
+                <p class="text-sm text-gray-500 mb-4">Please copy the link below and paste it into Google Chrome.</p>
+                <input type="text" value="https://pass.opencommons.org" readonly class="w-full p-3 bg-gray-100 border rounded mb-3 text-center text-gray-700 select-all">
+                <a href="https://www.google.com/chrome/" target="_blank" class="block text-center text-blue-500 hover:underline text-sm">Download Chrome</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. Browser Detection Logic ---
+        const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+        const isChrome = /Chrome/.test(userAgent) && /Google Inc/.test(navigator.vendor);
+        const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream;
+        const isAndroid = /android/i.test(userAgent);
+        
+        // iOS Chrome has 'CriOS' in user agent, standard Chrome has 'Chrome'
+        const isIOSChrome = /CriOS/.test(userAgent);
+        
+        // Final logic: Are we in a Chrome-based environment?
+        // Note: On iOS, all browsers use WebKit, but we specifically want the Chrome App context if possible.
+        const isRunningInChrome = isChrome || isIOSChrome;
+
+        // Current URL to pass along
+        const targetUrl = "pass.opencommons.org"; 
+        const currentFullUrl = window.location.href;
+
+        // --- 2. Action Logic ---
+
+        function openAndroidIntent() {
+            // Android Intent to force open in Chrome package
+            // Format: intent://<url>#Intent;scheme=https;package=com.android.chrome;end
+            const intentUrl = `intent://${targetUrl}#Intent;scheme=https;package=com.android.chrome;end`;
+            window.location.href = intentUrl;
+        }
+
+        function openIOSScheme() {
+            // iOS Chrome Scheme: googlechrome://domain.com
+            // We strip 'https://' and replace with 'googlechrome://'
+            const schemeUrl = `googlechrome://${targetUrl}`;
+            window.location.href = schemeUrl;
+            
+            // Fallback timeout: If the app doesn't open in 2 seconds, redirect to App Store
+            setTimeout(() => {
+                if (confirm("Chrome doesn't seem to be opening. Would you like to download it?")) {
+                    window.location.href = "https://apps.apple.com/us/app/google-chrome/id535886823";
+                }
+            }, 2000);
+        }
+
+        // --- 3. Render Logic ---
+        
+        if (isRunningInChrome) {
+            // User is in Chrome -> Show App
+            document.getElementById('app-content').classList.remove('hidden');
+        } else {
+            // User is NOT in Chrome -> Show Guide
+            document.getElementById('browser-guide').classList.remove('hidden');
+            
+            if (isAndroid) {
+                document.getElementById('android-instructions').classList.remove('hidden');
+            } else if (isIOS) {
+                document.getElementById('ios-instructions').classList.remove('hidden');
+            } else {
+                document.getElementById('generic-instructions').classList.remove('hidden');
+            }
+        }
+
+        // --- 4. PWA Service Worker Registration ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('SW Registered!', reg))
+                    .catch(err => console.log('SW Error', err));
+            });
+        }
+
+        // --- 5. Install Prompt Handler (Chrome only) ---
+        let deferredPrompt;
+        const installBtn = document.getElementById('install-btn');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Prevent Chrome 67 and earlier from automatically showing the prompt
+            e.preventDefault();
+            deferredPrompt = e;
+            // Show our custom install button
+            installBtn.classList.remove('hidden');
+        });
+
+        installBtn.addEventListener('click', (e) => {
+            installBtn.classList.add('hidden');
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then((choiceResult) => {
+                if (choiceResult.outcome === 'accepted') {
+                    console.log('User accepted the A2HS prompt');
+                }
+                deferredPrompt = null;
+            });
+        });
+    </script>
+</body>
+</html>

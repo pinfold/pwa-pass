@@ -15,7 +15,7 @@ Your app is now running at `http://localhost:8080`.
 ## 2. NGINX Reverse Proxy Configuration
 Add the following block to your NGINX site configuration (usually in `/etc/nginx/sites-available/default` or a specific file for your domain).
 
-Crucial: You must forward the X-Forwarded-Proto header. Without this, Flask won't know the connection is secure (HTTPS), and Service Workers often fail to register on "insecure" origins.
+Crucial: You must forward the 'X-Forwarded-Proto' header. Without this, Flask won't know the connection is secure (HTTPS), and Service Workers often fail to register on "insecure" origins.
 
 Nginx
 

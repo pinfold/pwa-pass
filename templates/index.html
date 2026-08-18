@@ -2,159 +2,671 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OpenCommons PWA</title>
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#4F46E5">
-    
-    <!-- Tailwind CSS for styling -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>OpenCommons Capture</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="OC Capture">
+    <link rel="manifest" href="/manifest.json?v=2">
+    <meta name="theme-color" content="#000000">
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-        .hidden { display: none; }
+        body { font-family: "Inter", sans-serif; background-color: #000; color: white; overflow: hidden; }
+        .hidden { display: none !important; }
+        
+        /* UI Layer */
+        #ui-layer {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100dvh;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* Center content */
+            align-items: center;
+        }
+        
+        /* Spinner */
+        .spinner { border: 4px solid rgba(255,255,255,0.3); border-radius: 50%; border-top: 4px solid #fff; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Incident Buttons */
+        .incident-btn {
+            transition: all 0.2s;
+        }
+        .incident-btn.selected {
+            background-color: #4F46E5; /* Indigo 600 */
+            color: white;
+            border-color: #4F46E5;
+        }
+        
+        /* Nearby Incidents Styles */
+        .nearby-incidents-container {
+            margin-top: 20px;
+            padding: 10px;
+        }
+        .incident-item {
+            background: linear-gradient(145deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .still-there-button {
+            background-color: #4F46E5; /* Indigo */
+            color: white;
+            width: 100%;
+            padding: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.05em;
+            transition: background 0.2s;
+        }
+        .still-there-button:active {
+            background-color: #4338CA;
+        }
+        .incident-item img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .incident-type {
+            font-weight: bold;
+            color: #4285f4;
+            margin-bottom: 5px;
+        }
+        .incident-description {
+            margin: 5px 0;
+            font-size: 0.9em;
+        }
+        .still-there-button:hover {
+            background-color: #2e8b46;
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+            text-align: center;
+        }
+        .incident-item-horizontal {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 12px;
+        }
+        .incident-image-container {
+            flex-shrink: 0;
+            width: 120px;
+            height: 120px;
+            overflow: hidden;
+            border-radius: 8px;
+        }        
+        .incident-image-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }        
+        .incident-text-content {
+            flex-grow: 1;
+            min-width: 0; /* Allows text to truncate properly */
+        }        
+        .incident-type-horizontal {
+            font-weight: bold;
+            color: #4285f4;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }        
+        .incident-description-horizontal {
+            margin: 4px 0;
+            font-size: 0.85em;
+            line-height: 1.3;
+        }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+<body>
 
-    <!-- CONTENT: Shown if user is correctly in Chrome -->
-    <div id="app-content" class="hidden w-full max-w-md bg-white rounded-xl shadow-lg overflow-hidden">
-        <div class="bg-indigo-600 p-6 text-center">
-            <h1 class="text-2xl font-bold text-white">Welcome!</h1>
-            <p class="text-indigo-100 mt-2">You are using Chrome.</p>
-        </div>
-        <div class="p-6 text-center">
-            <p class="text-gray-600 mb-6">You are all set to use the OpenCommons App.</p>
-            <button id="install-btn" class="hidden bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-full w-full transition duration-200">
-                Install App to Home Screen
+    <!-- STATE 1: EMAIL SETUP (White Background) -->
+    <div id="email-view" class="fixed inset-0 bg-gray-100 z-50 flex flex-col items-center justify-center p-6 text-gray-800">
+        <div class="max-w-md w-full bg-white rounded-xl shadow-xl p-6 text-center">
+            <h1 class="text-2xl font-bold text-indigo-600 mb-2">Welcome</h1>
+            <p class="text-gray-500 mb-6">Please enter your email address to receive updates on your reports. We will save this for future submissions.</p>
+            
+            <input type="email" id="user-email-input" placeholder="name@example.com" class="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-gray-800">
+            
+            <button onclick="saveEmailAndContinue()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition">
+                Continue
             </button>
-            <a href="https://pass.opencommons.org" class="block mt-4 text-indigo-600 hover:underline">Go to pass.opencommons.org</a>
         </div>
     </div>
 
-    <!-- GUIDE: Shown if user is NOT in Chrome -->
-    <div id="browser-guide" class="hidden w-full max-w-md bg-white rounded-xl shadow-lg overflow-hidden">
-        <div class="bg-orange-500 p-6 text-center">
-            <svg class="w-16 h-16 text-white mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-            <h1 class="text-2xl font-bold text-white">Chrome Required</h1>
-        </div>
-        <div class="p-6">
-            <p class="text-gray-700 mb-4">For the best experience, this application requires the <strong>Google Chrome</strong> browser.</p>
+    <!-- STATE 2: PERMISSIONS (White Background) -->
+    <div id="permissions-view" class="hidden fixed inset-0 bg-gray-100 z-50 flex flex-col items-center justify-center p-6 text-gray-800">
+        <div class="max-w-md w-full bg-white rounded-xl shadow-xl p-6 text-center">
+            <h1 class="text-2xl font-bold text-indigo-600 mb-2">Setup Required</h1>
+            <p class="text-gray-500 mb-6">We need access to your sensors to collect data.</p>
             
-            <div id="android-instructions" class="hidden">
-                <p class="text-sm text-gray-500 mb-4">We detected you are on Android. Tap below to open this page in Chrome.</p>
-                <button onclick="openAndroidIntent()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg w-full mb-3 flex items-center justify-center">
-                    <span>Open in Chrome</span>
-                </button>
+            <div class="space-y-3 mb-6">
+                <div id="status-loc" class="flex justify-between p-3 bg-gray-50 rounded border">
+                    <span>Location</span> <span class="font-bold text-yellow-600">Checking...</span>
+                </div>
             </div>
 
-            <div id="ios-instructions" class="hidden">
-                <p class="text-sm text-gray-500 mb-4">We detected you are on iOS. Tap below to switch to Chrome.</p>
-                <button onclick="openIOSScheme()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg w-full mb-3">
-                    Open in Chrome
-                </button>
-                <p class="text-xs text-gray-400 text-center">If nothing happens, you may need to install Chrome from the App Store.</p>
+            <button onclick="requestAllPermissions()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition">
+                Grant Permissions & Start
+            </button>
+        </div>
+    </div>
+
+    <!-- STATE 3: MAIN CAPTURE UI -->
+    <div id="camera-view" class="hidden fixed inset-0 bg-white flex flex-col">
+        
+        <div class="shrink-0 p-4 pt-4 bg-white border-b border-gray-200 text-gray-900 z-20">
+            <div style="display: none;">
+                <span id="debug-gps"></span>
+                <span id="debug-email"></span>
+                <span id="debug-heading"></span>
+                <span id="debug-alt"></span>
             </div>
 
-            <div id="generic-instructions" class="hidden">
-                <p class="text-sm text-gray-500 mb-4">Please copy the link below and paste it into Google Chrome.</p>
-                <input type="text" value="https://pass.opencommons.org" readonly class="w-full p-3 bg-gray-100 border rounded mb-3 text-center text-gray-700 select-all">
-                <a href="https://www.google.com/chrome/" target="_blank" class="block text-center text-blue-500 hover:underline text-sm">Download Chrome</a>
+            <div class="flex justify-between items-end mb-4">
+                
+                <a href="https://hmis.opencommons.org" class="block w-1/2">
+                    <svg version="1.1" viewBox="2200 300 24300 14000" xmlns="http://www.w3.org/2000/svg" class="h-12 w-auto block">
+                        <g id="shapes" stroke="#3465A4" stroke-width="28.222">
+                            <path fill="#CCCCCC" d="M 4151,3815 L 7881,3815 9746,7278 7881,10741 4151,10741 2286,7278 Z"/>                            
+                            <path fill="#0000FF" d="M 20859,346 L 24589,346 26454,3809 24589,7273 20859,7273 18994,3809 Z"/>                            
+                            <path fill="#FFCC00" d="M 15288,3815 L 19018,3815 20883,7278 19018,10741 15288,10741 13424,7278 Z"/>                            
+                            <path fill="#009933" d="M 9719,346 L 13449,346 15315,3809 13449,7273 9719,7273 7854,3809 Z"/>
+                        </g>
+                        <text x="2536" y="14051" font-family="Arial, sans-serif" font-size="3386">
+                            <tspan fill="#B2B2B2">Open</tspan><tspan fill="#0000FF">Commons</tspan>
+                        </text>
+                    </svg>
+                </a>
+
+                <a href="https://hmis.opencommons.org/Map_of_incidents" class="block">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 5 742 673" class="h-12 w-auto block">
+                        <defs>
+                            <filter id="shadow" height="1.3" width="1.1" y="-.1" x="-.04">
+                                <feGaussianBlur stdDeviation="12" />
+                            </filter>
+                        </defs>
+                        <g transform="translate(-68.7 -58.6)">
+                            <path filter="url(#shadow)" fill="#444" opacity="0.4" d="m169.86 507.87c-20.785 77.131-51.799 144.5-72.654 221.61 2.1 4.6 8.8 1 12.7 2.1 233.2-0.08 466.5 0.16 699.7-0.12 4.2-2.5-1.1-8.6-1-12.4-20.2-74.1-48.4-142.5-68.6-216.7-196 0-373.7 4-569.7 4l-0.27 0.9z" />
+                            <path fill="#dcd3ba" d="m746.45 498.58 62.9 230.6c0.06 0.23-0.23 0.44-0.53 0.44h-708.9c-0.29 0-0.59-0.2-0.53-0.44l62-230.6z" />
+                            <path opacity=".48" fill="#89d375" d="m726.73 727.45c0-1.1-3.3-4.2-5-4.7-2.3-0.6-9.2-4.8-9.2-5.5 0-0.3-0.4-0.5-0.8-0.5-2.6-0.09-10.2-9.2-11.9-14.4-0.6-1.9-1.5-3-3.6-4.1-1.5-0.7-3.2-1.4-3.8-1.4-0.6 0-2.7-0.8-4.8-1.9s-5.6-2.5-8-3.2c-6.7-2-10-3.9-14.7-8.2-3.3-3.1-4.6-4.9-5.6-7.9-0.7-2.1-1.3-4.4-1.3-5-0.01-0.6-0.9-2.4-2-3.9s-2.2-3.5-2.5-4.3c-0.2-0.8-0.7-1.5-1.1-1.5-0.3 0-0.6-0.6-0.6-1.4 0-1.9-6.7-8.3-10.7-10.2-1.7-0.8-3.4-1.9-3.7-2.4-0.3-0.5-1.7-0.9-3.2-0.9-4.6-0.001-20.8-4.9-20.8-6.3 0-0.3-0.9-1.6-2.1-2.9s-2.3-3-2.5-3.8c-0.2-0.7-1.7-3.4-3.2-5.9-2.6-4.3-2.7-4.7-2.7-11.1-0.01-6-0.7-9.7-2.5-12.7-0.3-0.6-3.2-2.4-6.4-3.9s-6.6-3.3-7.7-4.1c-1.6-1.1-4-1.4-14.6-1.8-13.3-0.5-19.6-1.8-23.8-4.9-1-0.7-2.2-1.4-2.5-1.4-0.3 0-1-1.1-1.5-2.5s-1.3-2.5-1.9-2.5c-0.5 0-1-0.3-1-0.6 0-0.9-7.8-8.5-8.7-8.5-0.6 0-8.4-3.7-13-6.2-0.7-0.4-3.3-1.1-5.7-1.6-4.7-0.9-10.3-3.3-10.8-4.7-0.1-0.5-0.7-0.9-1.1-0.9-1.4 0-4.4-4.5-5-7.3-0.2-1.4-0.5-7.8-0.5-14.2-0.05-11.3-0.08-11.5-2-14.6-1.1-1.7-3.3-4.5-5-6.2s-4.6-4.7-6.4-6.6-4.8-4.8-6.5-6.4l-2.7-3.8h275l31 115.1c16.8 62.5 29.8 114 29.8 114.1 0.02 0.09-18.1 0.17-40.3 0.17s-40.3-0.27-40.3-0.6z" />
+                            <path fill="#f7fd9f" d="m589.45 498.58h45l9.9 231.08h-65z" />
+                            <path fill="#fff" d="m781.4 623.6 10 40h-590l10-35z m-560-125h40l-36 165h-50z" />
+                            <path opacity=".8" d="m746.45 498.58 62.9 230.6c0.06 0.23-0.23 0.44-0.53 0.44h-708.9c-0.29 0-0.59-0.2-0.53-0.44l62-230.6z" stroke="#000" stroke-width="10" fill="none" />
+                            <path stroke="#000" stroke-width="10" fill="#e52626" d="m452.08 63.7c-99.4 0-179.8 80.4-179.8 179.5 0 31.1 7.9 60.5 21.9 86.0l157.8 264.3 157.8-264.3c13.9-25.5 21.9-54.9 21.9-86.0 0-99.1-80.3-179.5-179.8-179.5zm-2 104.3c0.6-0.01 1.3 0 2 0 42.9 0 77.8 34.8 77.8 77.8s-34.8 77.8-77.8 77.8c-42.9 0-77.8-34.8-77.8-77.8 0-42.3 33.7-76.7 75.8-77.8z" />
+                        </g>
+                    </svg>
+                </a>
+            </div>
+
+            <div class="py-2">
+                <h1 class="text-base font-medium leading-tight tracking-tight">
+                    Search <span class="text-blue-600">"NEARBY INCIDENTS"</span> first and mark <span class="text-blue-600">"STILL THERE"</span> only "Capture New Incident" if it is new.
+                    <div class="italic mt-2">This application is not for emergencies. Please use 911.</div>
+                </h1>
             </div>
         </div>
+
+        <div class="flex-grow overflow-y-auto p-4 pb-32" id="main-feed-container">
+            <h3 class="text-indigo-600 text-xs font-bold uppercase tracking-widest mb-4">Nearby Incidents</h3>
+            
+            <div id="incidents-container" class="space-y-4">
+                <div class="animate-pulse flex flex-col space-y-3">
+                    <div class="h-40 bg-gray-100 rounded-lg"></div>
+                    <div class="h-4 bg-gray-100 w-3/4 rounded"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-white via-white/90 to-transparent pointer-events-none">
+            <div class="max-w-xs mx-auto text-center pointer-events-auto">
+                <button onclick="triggerNativeCamera()" class="w-20 h-20 rounded-full border-4 border-indigo-500 bg-indigo-600 hover:bg-indigo-700 shadow-[0_0_20px_rgba(79,70,229,0.5)] flex items-center justify-center transition transform active:scale-95 mx-auto">
+                    <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.404 4h3.192a2 2 0 011.664.89l.812 1.22a2 2 0 001.664.89H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                </button>
+                <p class="text-gray-500 text-base mt-3 font-medium">Capture New Incident</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="submission-modal" class="hidden fixed inset-0 bg-black/90 z-40 flex flex-col items-center justify-center p-4">
+        <div class="bg-white w-full max-w-lg rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="bg-indigo-600 p-4 text-center shrink-0">
+                <h2 class="text-white font-bold text-lg">Incident Details</h2>
+            </div>
+            
+            <div class="p-4 overflow-y-auto flex-grow text-gray-800">
+                <p class="text-xs text-gray-500 mb-2 uppercase font-semibold">1. Incident Types (Select all that apply)</p>
+                <div class="grid grid-cols-2 gap-2 mb-6" id="incident-type-container">
+                    <button type="button" class="incident-btn p-2 rounded border border-gray-300 text-sm bg-gray-50 text-gray-700" onclick="toggleIncident(this, 'Camp')">Camp</button>
+                    <button type="button" class="incident-btn p-2 rounded border border-gray-300 text-sm bg-gray-50 text-gray-700" onclick="toggleIncident(this, 'Graffiti')">Graffiti</button>
+                    <button type="button" class="incident-btn p-2 rounded border border-gray-300 text-sm bg-gray-50 text-gray-700" onclick="toggleIncident(this, 'Drug')">Drug</button>
+                    <button type="button" class="incident-btn p-2 rounded border border-gray-300 text-sm bg-gray-50 text-gray-700" onclick="toggleIncident(this, 'Vehicle')">Vehicle</button>
+                </div>
+
+                <p class="text-xs text-gray-500 mb-2 uppercase font-semibold">2. Other Types or Additional Information</p>
+                <textarea id="incident-description" class="w-full p-3 border border-gray-300 rounded-lg h-24 text-sm focus:ring-2 focus:ring-indigo-500 text-gray-900 mb-6" placeholder="Describe what you observed..."></textarea>
+
+                <p class="text-xs text-gray-500 mb-2 uppercase font-semibold">3. Classification</p>
+                <div class="flex flex-col gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" id="check-obstruction" class="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                        <span class="text-sm font-medium text-gray-700">Obstruction</span>
+                    </label>
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" id="check-hazard" class="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                        <span class="text-sm font-medium text-gray-700">Hazard</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="p-4 bg-gray-50 border-t border-gray-200 shrink-0 flex gap-3">
+                <button onclick="cancelSubmission()" class="flex-1 py-3 px-4 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition">Cancel</button>
+                <button onclick="submitFinalReport()" class="flex-1 py-3 px-4 rounded-lg bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition shadow-lg">Submit Report</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Processing Overlay -->
+    <div id="processing-overlay" class="hidden fixed inset-0 bg-black/90 z-50 flex flex-col items-center justify-center text-white">
+        <div class="spinner mb-4"></div>
+        <p id="processing-text" class="text-lg">Uploading Report...</p>
     </div>
 
     <script>
-        // --- 1. Browser Detection Logic ---
-        const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-        const isChrome = /Chrome/.test(userAgent) && /Google Inc/.test(navigator.vendor);
-        const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream;
-        const isAndroid = /android/i.test(userAgent);
+        const isRunningInChrome = true; 
+        let lastCheckTime = 0;
+        let lastCheckLocation = null;
         
-        // iOS Chrome has 'CriOS' in user agent, standard Chrome has 'Chrome'
-        const isIOSChrome = /CriOS/.test(userAgent);
-        
-        // Final logic: Are we in a Chrome-based environment?
-        // Note: On iOS, all browsers use WebKit, but we specifically want the Chrome App context if possible.
-        const isRunningInChrome = isChrome || isIOSChrome;
+        let state = {
+            permissions: { geolocation: false },
+            email: null,
+            tempFile: null, // Holds the file while filling out the form
+            selectedIncidents: new Set(),
+            data: {
+                lat: null, lon: null, alt: null, heading: 0,
+                makeModel: navigator.userAgent
+            }
+        };
 
-        // Current URL to pass along
-        const targetUrl = "pass.opencommons.org"; 
-        const currentFullUrl = window.location.href;
+        // --- 1. Initialization ---
 
-        // --- 2. Action Logic ---
+        window.addEventListener('load', async () => {
+            // Device Detection
+            const platform = navigator.platform || "Unknown";
+            const ua = navigator.userAgent;
+            let deviceName = "Generic Device";
+            if (ua.indexOf("Pixel") !== -1) deviceName = "Google Pixel";
+            else if (ua.indexOf("iPhone") !== -1) deviceName = "Apple iPhone";
+            else if (ua.indexOf("Android") !== -1) deviceName = "Android Device";
+            state.data.makeModel = `${deviceName} (${platform})`;
 
-        function openAndroidIntent() {
-            // Android Intent to force open in Chrome package
-            // Format: intent://<url>#Intent;scheme=https;package=com.android.chrome;end
-            const intentUrl = `intent://${targetUrl}#Intent;scheme=https;package=com.android.chrome;end`;
-            window.location.href = intentUrl;
-        }
+            // Setup listeners
+            document.getElementById('native-camera-input').addEventListener('change', handleFileSelect);
 
-        function openIOSScheme() {
-            // iOS Chrome Scheme: googlechrome://domain.com
-            // We strip 'https://' and replace with 'googlechrome://'
-            const schemeUrl = `googlechrome://${targetUrl}`;
-            window.location.href = schemeUrl;
-            
-            // Fallback timeout: If the app doesn't open in 2 seconds, redirect to App Store
-            setTimeout(() => {
-                if (confirm("Chrome doesn't seem to be opening. Would you like to download it?")) {
-                    window.location.href = "https://apps.apple.com/us/app/google-chrome/id535886823";
-                }
-            }, 2000);
-        }
+            // Start Flow
+            checkEmail();
+        });
 
-        // --- 3. Render Logic ---
-        
-        if (isRunningInChrome) {
-            // User is in Chrome -> Show App
-            document.getElementById('app-content').classList.remove('hidden');
-        } else {
-            // User is NOT in Chrome -> Show Guide
-            document.getElementById('browser-guide').classList.remove('hidden');
-            
-            if (isAndroid) {
-                document.getElementById('android-instructions').classList.remove('hidden');
-            } else if (isIOS) {
-                document.getElementById('ios-instructions').classList.remove('hidden');
+        // --- 2. Email & Permissions Flow ---
+
+        function checkEmail() {
+            const storedEmail = localStorage.getItem('opencommons_email');
+            if (storedEmail) {
+                state.email = storedEmail;
+                document.getElementById('debug-email').textContent = state.email;
+                document.getElementById('email-view').classList.add('hidden');
+                // Proceed to Permissions
+                checkPermissions();
             } else {
-                document.getElementById('generic-instructions').classList.remove('hidden');
+                // Show Email View (default state in HTML)
             }
         }
 
-        // --- 4. PWA Service Worker Registration ---
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(reg => console.log('SW Registered!', reg))
-                    .catch(err => console.log('SW Error', err));
+        function saveEmailAndContinue() {
+            const input = document.getElementById('user-email-input');
+            const email = input.value.trim();
+            if (email && email.includes('@')) {
+                localStorage.setItem('opencommons_email', email);
+                state.email = email;
+                document.getElementById('debug-email').textContent = state.email;
+                document.getElementById('email-view').classList.add('hidden');
+                checkPermissions();
+            } else {
+                alert("Please enter a valid email address.");
+            }
+        }
+
+        async function checkPermissions() {
+            document.getElementById('permissions-view').classList.remove('hidden');
+            if (navigator.permissions) {
+                try {
+                    const geo = await navigator.permissions.query({ name: 'geolocation' });
+                    updatePermUI('status-loc', geo.state);
+                    if (geo.state === 'granted') state.permissions.geolocation = true;
+                } catch(e) {}
+            }
+            if (state.permissions.geolocation) enterAppMode();
+        }
+
+        function updatePermUI(id, status) {
+            const el = document.getElementById(id);
+            const text = el.querySelector('span:last-child');
+            if (status === 'granted') {
+                text.textContent = 'Granted'; text.className = 'font-bold text-green-600';
+            } else if (status === 'denied') {
+                text.textContent = 'Denied'; text.className = 'font-bold text-red-600';
+            } else {
+                text.textContent = 'Pending'; text.className = 'font-bold text-yellow-600';
+            }
+        }
+
+        async function requestAllPermissions() {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    state.permissions.geolocation = true;
+                    updatePermUI('status-loc', 'granted');
+                    requestDeviceOrientation();
+                },
+                (err) => { alert("Location permission is required."); },
+                { enableHighAccuracy: true }
+            );
+        }
+
+        function requestDeviceOrientation() {
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission()
+                    .then(response => enterAppMode())
+                    .catch(e => enterAppMode());
+            } else {
+                enterAppMode();
+            }
+        }
+
+        // --- 3. App Mode & Sensors ---
+
+        function enterAppMode() {
+            document.getElementById('permissions-view').classList.add('hidden');
+            document.getElementById('camera-view').classList.remove('hidden');
+            
+            navigator.geolocation.watchPosition((pos) => {
+                const { latitude, longitude, altitude } = pos.coords;
+                const now = Date.now();
+
+                // --- THE MISSING LINK ---
+                // This ensures submitFinalReport ALWAYS has the latest data
+                state.data.lat = latitude;
+                state.data.lon = longitude;
+                state.data.alt = altitude || 0;
+                // Update the UI so you can see it working
+                const debugGps = document.getElementById('debug-gps');
+                if (debugGps) debugGps.textContent = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+
+                // --- THROTTLE LOGIC ---
+                if (!lastCheckLocation) {
+                    lastCheckLocation = { lat: latitude, lon: longitude };
+                    lastCheckTime = now;
+                    checkNearbyIncidents(latitude, longitude);
+                    return;
+                }
+
+                const dist = calculateDistance(latitude, longitude, lastCheckLocation.lat, lastCheckLocation.lon);
+                const timeElapsed = now - lastCheckTime;
+
+                // Only hit the DB if moved > 20m OR 60 seconds passed
+                if (dist > 20 || timeElapsed > 60000) {
+                    lastCheckLocation = { lat: latitude, lon: longitude };
+                    lastCheckTime = now;
+                    checkNearbyIncidents(latitude, longitude);
+                }
+            }, err => console.error("GPS Watch Error:", err), { 
+                enableHighAccuracy: true,
+                maximumAge: 0, 
+                timeout: 5000 
             });
         }
 
-        // --- 5. Install Prompt Handler (Chrome only) ---
-        let deferredPrompt;
-        const installBtn = document.getElementById('install-btn');
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const dy = 111320 * (lat1 - lat2);
+            const dx = 111320 * (lon1 - lon2) * Math.cos(lat1 * Math.PI / 180);
+            return Math.sqrt(dx * dx + dy * dy);
+        }
 
-        window.addEventListener('beforeinstallprompt', (e) => {
-            // Prevent Chrome 67 and earlier from automatically showing the prompt
-            e.preventDefault();
-            deferredPrompt = e;
-            // Show our custom install button
-            installBtn.classList.remove('hidden');
-        });
+        // --- 4. Capture & Incident Form Logic ---
 
-        installBtn.addEventListener('click', (e) => {
-            installBtn.classList.add('hidden');
-            deferredPrompt.prompt();
-            deferredPrompt.userChoice.then((choiceResult) => {
-                if (choiceResult.outcome === 'accepted') {
-                    console.log('User accepted the A2HS prompt');
+       function triggerNativeCamera() {
+            const fileInput = document.getElementById('native-camera-input');
+            if (fileInput) {
+                fileInput.click();
+            } else {
+                alert("Camera input element not found in HTML!");
+            }
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return; // User cancelled
+
+            // Store file temporarily
+            state.tempFile = file;
+
+            // Open Submission Modal
+            openSubmissionModal();
+        }
+
+        function openSubmissionModal() {
+            // Reset Form
+            document.getElementById('incident-description').value = '';
+            state.selectedIncidents.clear();
+            document.querySelectorAll('.incident-btn').forEach(btn => btn.classList.remove('selected'));
+            
+            // Show Modal
+            document.getElementById('submission-modal').classList.remove('hidden');
+            
+            // Check for nearby incidents when opening submission modal
+            checkNearbyIncidents();
+        }
+
+        function toggleIncident(btn, type) {
+            if (state.selectedIncidents.has(type)) {
+                state.selectedIncidents.delete(type);
+                btn.classList.remove('selected');
+            } else {
+                state.selectedIncidents.add(type);
+                btn.classList.add('selected');
+            }
+        }
+
+        function cancelSubmission() {
+            document.getElementById('submission-modal').classList.add('hidden');
+            document.getElementById('native-camera-input').value = ''; // Reset file input
+            state.tempFile = null;
+        }
+
+        async function submitFinalReport() {
+            const description = document.getElementById('incident-description').value;
+            const incidentList = Array.from(state.selectedIncidents).join(', ');
+            
+            // Capture the state of the new checkboxes
+            const isObstruction = document.getElementById('check-obstruction').checked;
+            const isHazard = document.getElementById('check-hazard').checked;
+
+            // Updated validation: Check if everything is empty/unselected
+            if (state.selectedIncidents.size === 0 && description.trim() === "" && !isObstruction && !isHazard) {
+                if (!confirm("You haven't selected any details. Submit anyway?")) return;
+            }
+
+            // Show Processing
+            document.getElementById('submission-modal').classList.add('hidden');
+            const overlay = document.getElementById('processing-overlay');
+            overlay.classList.remove('hidden');
+
+            try {
+                const formData = new FormData();
+                formData.append('photo', state.tempFile);
+                formData.append('email', state.email);
+                formData.append('incident_types', incidentList);
+                formData.append('description', description);
+                
+                // Append new classification data
+                formData.append('is_obstruction', isObstruction);
+                formData.append('is_hazard', isHazard);
+                
+                // Sensor Data
+                formData.append('latitude', state.data.lat || 0);
+                formData.append('longitude', state.data.lon || 0);
+                formData.append('altitude', state.data.alt || 0);
+                formData.append('heading', state.data.heading || 0);
+                formData.append('make_model', state.data.makeModel);
+                formData.append('focal_length', "Native Camera (Auto)");
+                
+                console.log("Sending formData:", [...formData.entries()]);
+                
+                const res = await fetch('/upload', { method: 'POST', body: formData });
+                const result = await res.json();
+
+                if (res.ok) {
+                    alert("Report Submitted Successfully!");
+                    lastCheckLocation = { lat: state.data.lat, lon: state.data.lon };
+                    lastCheckTime = Date.now();
+                    checkNearbyIncidents(state.data.lat, state.data.lon);
+                } else {
+                    alert("Submission failed: " + (result.error || result.message || "Unknown error"));
                 }
-                deferredPrompt = null;
+            } catch (e) {
+                console.error("Error in submitFinalReport:", e);
+                alert("Error submitting report: " + e.message);
+            } finally {
+                overlay.classList.add('hidden');
+                document.getElementById('native-camera-input').value = ''; 
+                
+                // Reset the checkboxes for the next report
+                document.getElementById('check-obstruction').checked = false;
+                document.getElementById('check-hazard').checked = false;
+                
+                state.tempFile = null;
+            }
+        }
+
+        // --- 5. Nearby Incidents Logic ---
+
+        async function checkNearbyIncidents() {
+            try {
+                // Get current location
+                if (!navigator.geolocation) {
+                    console.error('Geolocation is not supported');
+                    return;
+                }
+
+                navigator.geolocation.getCurrentPosition(async (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    
+                    const response = await fetch(`/check_nearby?latitude=${lat}&longitude=${lon}`);
+                    const incidents = await response.json();
+                    
+                    if (response.ok) {
+                        displayNearbyIncidents(incidents);
+                    } else {
+                        console.error('Error fetching nearby incidents:', incidents.error);
+                    }
+                }, (error) => {
+                    console.error('Error getting location:', error);
+                });
+            } catch (error) {
+                console.error('Error checking nearby incidents:', error);
+            }
+        }
+
+        // Display nearby incidents
+        function displayNearbyIncidents(incidents) {
+            const container = document.getElementById('incidents-container');
+            if (!container) return;
+
+            if (!incidents || !Array.isArray(incidents) || incidents.length === 0) {
+                container.innerHTML = '<div class="text-center py-10 opacity-50">No reports in this immediate area.</div>';
+                return;
+            }
+
+            container.innerHTML = incidents.map(inc => {
+                // Log one to the console so you can see the keys on a laptop if needed
+                // console.log("Incident Data:", inc);
+
+                // Defensive check: handle both SQL-aliased names and raw metadata
+                const typeLabel = inc.incident_type || inc.Type || "Incident";
+                const descText = inc.description || inc.Description || "";
+                const imageUrl = inc.image_url || (inc.image_path ? `http://192.168.86.39:9000/images/${inc.image_path}` : null);
+                
+                // Ensure we have a valid date
+                const dateStr = inc.last_report ? new Date(inc.last_report).toLocaleTimeString() : "Recent";
+
+                return `
+                    <div class="incident-item mb-4 bg-gray-100 rounded-lg overflow-hidden border border-white/10 incident-item-horizontal">
+                        ${imageUrl ? `
+                            <div class="incident-image-container">
+                                <img src="${imageUrl}" class="w-full h-full object-cover" onerror="this.style.display='none'">
+                            </div>` : ''}
+                        <div class="incident-text-content p-3 text-left">
+                            <div class="text-indigo-600 font-bold text-xs uppercase mb-1 incident-type-horizontal">${typeLabel}</div>
+                            ${descText ? `<div class="text-black text-sm mb-2 incident-description-horizontal">${descText}</div>` : ''}
+                            <div class="text-gray-500 text-[10px] uppercase mb-3">Seen: ${dateStr}</div>
+                            <button class="still-there-button rounded" onclick="confirmStillThere('${inc.id}')">
+                                Still There
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+   
+        // Confirm incident is still there
+        async function confirmStillThere(id) {
+            try {
+                const response = await fetch(`/still_there/${id}`, {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                if (response.ok) {
+                    alert('Incident status updated successfully!');
+                    // Refresh incidents list
+                    checkNearbyIncidents();
+                } else {
+                    alert('Error updating incident status: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error updating incident status: ' + error.message);
+            }
+        }
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').then(reg => {
+                    reg.onupdatefound = () => {
+                        const sw = reg.installing;
+                        sw.onstatechange = () => {
+                            // Only reload if there was a previous controller (an old version)
+                            if (sw.state === 'installed' && navigator.serviceWorker.controller) {
+                                console.log('New content available; refreshing...');
+                                window.location.reload();
+                            }
+                        };
+                    };
+                }).catch(error => {
+                    console.error('Service Worker registration failed:', error);
+                });
             });
-        });
+        }
     </script>
+    <input type="file" id="native-camera-input" accept="image/*" capture="environment" class="hidden">
 </body>
 </html>

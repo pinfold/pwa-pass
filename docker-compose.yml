@@ -1,0 +1,21 @@
+services:
+  pwa-app:
+    build: .
+    pull_policy: build
+    container_name: opencommons_passv3
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "5102:5000"
+    environment:
+      - FLASK_ENV=production
+      - PYTHONUNBUFFERED=1
+    user: "1000:1000"
+    networks:
+      - postgres-data-net
+    volumes:
+      - ./my_local_logs:/app/logs
+networks:
+  postgres-data-net:
+    external: true

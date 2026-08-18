@@ -77,17 +77,24 @@ timestamps, status) in a PostgreSQL database with the PostGIS extension.
 
 ## Architecture
 
-```
-┌───────────────┐        ┌─────────────────────┐        ┌───────────────────────┐
-│  Browser PWA  │  HTTP  │   Flask + Gunicorn   │        │   PostgreSQL+PostGIS  │
-│ (camera, GPS, │───────▶│   (app.py)           │───────▶│   incident metadata   │
-│  service      │        │                      │        │   & geolocation       │
-│  worker)      │        │                      │        └───────────────────────┘
-└───────────────┘        │                      │
-                          │                      │        ┌───────────────────────┐
-                          │                      │───────▶│   MinIO / S3 bucket   │
-                          │                      │        │   original photos     │
-                          └─────────────────────-┘        └───────────────────────┘
+```mermaid
+graph LR
+    subgraph Client ["Client"]
+        PWA["Browser PWA<br>(camera, GPS, service worker)"]
+    end
+
+    subgraph Backend ["Backend Service"]
+        Flask["Flask + Gunicorn<br>(app.py)"]
+    end
+
+    subgraph Storage ["Data Storage"]
+        DB[("PostgreSQL + PostGIS<br>incident metadata<br>& geolocation")]
+        MinIO[("MinIO / S3 bucket<br>original photos")]
+    end
+
+    PWA ==>|HTTP| Flask
+    Flask --> DB
+    Flask --> MinIO
 ```
 
 All three components run as separate Docker containers on a shared,
